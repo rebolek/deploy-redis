@@ -117,17 +117,32 @@ list-rule: [
 	'list ( list )
 ]
 
+range-rule: [
+	set start-port integer!
+	'..
+	set end-port integer!
+]
+
 remove-rule: [
 	'remove
-	some [
-		set port integer! ( dispose port )
+	[
+		range-rule (
+			repeat port end-port - start-port + 1 [
+				dispose start-port + port - 1
+			]
+		)
+	|	some [ set port integer! ( dispose port ) ]
 	]
 ]
 
 deploy-rule: [
-	some [
-		set port integer! ( deploy port )
-	]
+	range-rule (
+		print "range"
+		repeat port end-port - start-port + 1 [
+			deploy start-port + port - 1
+		]
+	)
+|	some [ set port integer! ( deploy port ) ]
 ]
 
 ; ======================
