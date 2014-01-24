@@ -13,39 +13,92 @@ REBOL[
 	]
 ]
 
+; ==========================
+
+daemon: func [
+	"Do daemon action (start, stop,...) for given redis port"
+	port 	[ integer! ]	"Redis port"
+	action 	[ word! ] 		"Daemon action"
+] [
+	call rejoin [ "sudo /etc/init.d/redis_" port " " action ]
+]
+
+config-file: func [
+	"Return config file! for given Redis port"
+	port 	[ integer! ]
+] [
+	rejoin [ %/etc/redis/ port %.conf ]
+]
+
+deploy: funct [
+	"Setup new Redis instance"
+	port	[integer!] "Port number"
+] [
+	; TODO: check if port isn't already assigned
+
+	; make default dirs if needed
+
+	unless exists? %/etc/redis [ mkdir %/etc/redis ]
+	unless exists? %/var/redis [ mkdir %/var/redis ]
+	mkdir join %/var/redis/ port
+
+	; customize and copy init script - replace default port number
+
+	init-script: read %redis_init_script
+	replace init-script "6379" to string! port
+	write join %/etc/init.d/redis_ port init-script
+	call join "sudo chmod 755 /etc/init.d/redis_" port
+
+	; customize and copy configuration file
+
+	config: read %redis.conf
+	replace config "daemonize no" "daemonize yes"
+	replace config "pidfile /var/run/redis.pid" rejoin ["pidfile /var/run/redis" port ".pid"]
+	replace config "port 6379" join "port " port
+	replace config {logfile ""} rejoin ["logfile /var/log/redis_" port ".log"]
+	replace config "dir ./" join "dir /var/redis/" port
+	write config-file port config
+
+	; add redis init script to default runlevels
+
+	call rejoin ["sudo update-rc.d redis_" port " defaults"]
+
+	; run redis instance
+
+	daemon port 'start
+
+	; be nice and return something ( TODO: error handling )
+
+	true
+]
+
+dispose: funct [
+	"Stop Redis instance and remove its files"
+	port	[integer!] "Port number"
+][
+	; TODO: check if this instance exists
+
+	; stop Redis instance and remove daemon script
+
+	call [ "sudo update-rc.d -f redis_" port " remove" ]
+
+	; remove logs and config files
+
+	rm config-file port
+	var-path: dirize join %/var/redis/ port
+	foreach file read var-path [
+		rm join var-path file
+	]
+	rm var-path
+]
+
+; ======================
+
 ; read command line arguments
 
 args: system/options/args
-port: args/1
+port: to integer! args/1
 
+print ["ARGS: " mold args]
 
-; make redis conf dirs
-
-mkdir %/etc/redis
-mkdir %/var/redis
-mkdir join %/var/redis/ port
-
-; customize and copy init script - replace default port number
-
-init-script: read %redis_init_script
-replace init-script "6379" port
-write join %/etc/init.d/redis_ port init-script
-call join "sudo chmod 755 /etc/init.d/redis_" port
-
-; customize and copy configuration file
-
-config: read %redis.conf
-replace config "daemonize no" "daemonize yes"
-replace config "pidfile /var/run/redis.pid" rejoin ["pidfile /var/run/redis" port ".pid"]
-replace config "port 6379" join "port " port
-replace config {logfile ""} rejoin ["logfile /var/log/redis_" port ".log"]
-replace config "dir ./" join "dir /var/redis/" port
-write rejoin [ %/etc/redis/ port %.conf ] config
-
-; add redis init script to default runlevels
-
-call rejoin ["sudo update-rc.d redis_" port " defaults"]
-
-; run redis instance
-
-call rejoin ["sudo /etc/init.d/redis_" port "  start"]
+deploy port
