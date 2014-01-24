@@ -80,7 +80,8 @@ dispose: funct [
 
 	; stop Redis instance and remove daemon script
 
-	call [ "sudo update-rc.d -f redis_" port " remove" ]
+	call rejoin [ "sudo update-rc.d -f redis_" port " remove" ]
+	rm join %/etc/init.d/redis_ port
 
 	; remove logs and config files
 
@@ -94,11 +95,27 @@ dispose: funct [
 
 ; ======================
 
+remove-rule: [
+	'remove
+	some [
+		set port integer! ( dispose port )
+	]
+]
+
+deploy-rule: [
+	some [
+		set port integer! ( deploy port )
+	]
+]
+
+; ======================
+
 ; read command line arguments
 
-args: system/options/args
-port: to integer! args/1
+args: load system/script/args
+print ["ARGS: " mold system/script/args]
 
-print ["ARGS: " mold args]
-
-deploy port
+parse args [
+	remove-rule
+|	deploy-rule
+]
