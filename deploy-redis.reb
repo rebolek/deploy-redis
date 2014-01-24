@@ -11,6 +11,12 @@ REBOL[
 		%redis_init_script
 		%redis.conf
 	]
+	To-Do: [
+		"Error checking"
+		"Create slaves"
+		"Add some instance parameters (memory, ...)"
+		"Standalone version"
+	]
 ]
 
 ; ==========================
@@ -93,7 +99,23 @@ dispose: funct [
 	rm var-path
 ]
 
+list: funct [
+	"List all available Redis instances"
+][
+	files: sort read %/etc/init.d/
+	print "Available Redis instances by port number:"
+	foreach file files [
+		if equal? "redis" copy/part file 5 [
+			print skip file 6
+		]
+	]
+]
+
 ; ======================
+
+list-rule: [
+	'list ( list )
+]
 
 remove-rule: [
 	'remove
@@ -112,10 +134,10 @@ deploy-rule: [
 
 ; read command line arguments
 
-args: load system/script/args
-print ["ARGS: " mold system/script/args]
+args: append [] load system/script/args
 
 parse args [
-	remove-rule
+	list-rule
+|	remove-rule
 |	deploy-rule
 ]
