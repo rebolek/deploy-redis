@@ -38,7 +38,9 @@ config-file: func [
 
 deploy: funct [
 	"Setup new Redis instance"
-	port	[integer!] "Port number"
+	port	[integer!] 		"Port number"
+	/slave 					"Setup instance as slave"
+		slave-of [integer!]	"Port of master"
 ] [
 	; TODO: check if port isn't already assigned
 
@@ -63,6 +65,10 @@ deploy: funct [
 	replace config "port 6379" join "port " port
 	replace config {logfile ""} rejoin ["logfile /var/log/redis_" port ".log"]
 	replace config "dir ./" join "dir /var/redis/" port
+	if slave [
+		; NOTE: as deploy-redis runs locally, slave is expected to be local
+		replace config "# slaveof <masterip> <masterport>" join "slaveof 127.0.0.1 " slave-of
+	]
 	write config-file port config
 
 	; add redis init script to default runlevels
@@ -123,26 +129,41 @@ range-rule: [
 	set end-port integer!
 ]
 
+remove-range: [
+	(
+		repeat port end-port - start-port + 1 [
+			dispose start-port + port - 1
+		]
+	)
+]
+
+deploy-range: [
+	(
+		repeat port end-port - start-port + 1 [
+			deploy start-port + port - 1
+		]
+	)
+]
+
 remove-rule: [
 	'remove
 	[
-		range-rule (
-			repeat port end-port - start-port + 1 [
-				dispose start-port + port - 1
-			]
-		)
+		range-rule
+		remove-range
 	|	some [ set port integer! ( dispose port ) ]
 	]
 ]
 
 deploy-rule: [
-	range-rule (
-		print "range"
-		repeat port end-port - start-port + 1 [
-			deploy start-port + port - 1
+	range-rule
+	deploy-range
+|	some [
+		set port integer! ( deploy port )
+		opt [
+			'slave
+			set slave-port integer! ( deploy/slave slave-port port )
 		]
-	)
-|	some [ set port integer! ( deploy port ) ]
+	]
 ]
 
 ; ======================
