@@ -7,27 +7,38 @@ Usage
 =====
 
 Create new Redis instance:
+--------------------------
 
 	sudo r3 deploy-redis.reb <port-number>
 	sudo r3 deploy-redis.reb 7000
 
 Create more Redis instances:
+----------------------------
 
 	sudo r3 deploy-redis.reb <port-number> <another-port-number>
 	sudo r3 deploy-redis.reb 7000 7010 7020
 
 Create Redis instances in port range:
+-------------------------------------
 
 	sudo r3 deploy-redis.reb <start-port-number> .. <end-port-number>
 	sudo r3 deploy-redis.reb 7000 .. 7005
 
+Create master Redis instance with slave:
+----------------------------------------
+
+	sudo r3 deploy-redis.reb <master-port> slave <slave-port>
+	sudo r3 deploy-redis.reb 7000 slave 7100
+
 Remove Redis instance:
+----------------------
 
 	sudo r3 deploy-redis.reb remove <port-number>
 
 You can also use more ports and ranges as with deployment.
 
 List all available Redis instances:
+-----------------------------------
 
 	sudo r3 deploy-redis.reb list
 
