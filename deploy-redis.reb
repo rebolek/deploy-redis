@@ -47,6 +47,7 @@ deploy: funct [
 	/slave 					"Setup instance as slave"
 		slave-of [integer!]	"Port of master"
 ] [
+	print ["deploy:" port]
 	; TODO: check if port isn't already assigned
 
 	; make default dirs if needed
@@ -57,28 +58,28 @@ deploy: funct [
 
 	; customize and copy init script - replace default port number
 
-	init-script: read %redis_init_script
-	replace init-script "6379" to string! port
+	init-script: to string! read %redis_init_script
+	init-script: reword init-script reduce [
+		'port 		port
+	]
 	write join %/etc/init.d/redis_ port init-script
 	call join "sudo chmod 755 /etc/init.d/redis_" port
 
 	; customize and copy configuration file
 
-	config: read %redis.conf
-	reword config reduce compose [
-		daemonize 	"daemonize yes"
-		pid 		( pid )
-		port 		( port )
-		logfile 	( rejoin ["/var/log/redis_" port ".log"] )
-		dir 		( join "/var/redis/" port )
-		slaveof 	(
+	config: to string! read %redis.conf
+	config: reword config reduce [
+		'daemonize 	"daemonize yes"
+		'port 		port
+		'logfile 	rejoin ["/var/log/redis_" port ".log"]
+		'dir 		join "/var/redis/" port
+		'slaveof
 			; NOTE: as deploy-redis runs locally, slave is expected to be local
 			either slave [
 				join "slaveof 127.0.0.1 " slave-of
 			] [
 				"# slaveof <masterip> <masterport>"
 			]
-		)
 	]
 	write config-file port config
 
