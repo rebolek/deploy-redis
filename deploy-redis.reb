@@ -12,10 +12,15 @@ REBOL[
 		%redis.conf
 	]
 	To-Do: [
-		"Error checking"
-		"Create slaves"
-		"Add some instance parameters (memory, ...)"
-		"Standalone version"
+		#1 "Error checking"
+		#2 "Add some instance parameters (memory, ...)"
+		#4 "Standalone version"
+		#5 "LIST should list more informations (master/slave...)"
+	]
+	Done: [
+		25-1-2014 [
+			#3 "Create slaves"
+		]
 	]
 ]
 
@@ -60,14 +65,20 @@ deploy: funct [
 	; customize and copy configuration file
 
 	config: read %redis.conf
-	replace config "daemonize no" "daemonize yes"
-	replace config "pidfile /var/run/redis.pid" rejoin ["pidfile /var/run/redis" port ".pid"]
-	replace config "port 6379" join "port " port
-	replace config {logfile ""} rejoin ["logfile /var/log/redis_" port ".log"]
-	replace config "dir ./" join "dir /var/redis/" port
-	if slave [
-		; NOTE: as deploy-redis runs locally, slave is expected to be local
-		replace config "# slaveof <masterip> <masterport>" join "slaveof 127.0.0.1 " slave-of
+	reword config reduce compose [
+		daemonize 	"daemonize yes"
+		pid 		( pid )
+		port 		( port )
+		logfile 	( rejoin ["/var/log/redis_" port ".log"] )
+		dir 		( join "/var/redis/" port )
+		slaveof 	(
+			; NOTE: as deploy-redis runs locally, slave is expected to be local
+			either slave [
+				join "slaveof 127.0.0.1 " slave-of
+			] [
+				"# slaveof <masterip> <masterport>"
+			]
+		)
 	]
 	write config-file port config
 
